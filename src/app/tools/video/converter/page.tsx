@@ -20,6 +20,7 @@ export default function VideoConverterPage() {
         accept='video/*'
         hint='Local execution up to 4GB files — the engine loads once, then works offline'
         run={(files, onProgress) => convertVideos(files, { format, resolution, quality }, onProgress)}
+        processLabel='Converting'
         runLabel={`Convert to ${format.toUpperCase()}`}
         options={
           <OptionsPanel>

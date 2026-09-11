@@ -19,6 +19,7 @@ export default function VideoCompressorPage() {
         accept='video/*'
         hint='Local execution up to 4GB files — the engine loads once, then works offline'
         run={(files, onProgress) => compressVideos(files, { quality, resolution }, onProgress)}
+        processLabel='Compressing'
         runLabel='Compress videos'
         options={
           <OptionsPanel>

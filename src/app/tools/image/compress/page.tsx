@@ -30,6 +30,7 @@ export default function ImageCompressPage() {
         run={(files, onProgress) =>
           compressImages(files, { format, quality: quality / 100, maxWidth: maxWidth || undefined }, onProgress)
         }
+        processLabel='Compressing'
         runLabel='Compress images'
         options={
           <OptionsPanel>

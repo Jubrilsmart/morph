@@ -15,6 +15,7 @@ export default function DocxToPdfPage() {
         accept='.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         multiple={false}
         run={docxToPdf}
+        processLabel='Rendering document'
         runLabel='Convert to PDF'
         hint='One .docx at a time — rendered entirely on your device'
       />

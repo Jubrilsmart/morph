@@ -18,6 +18,7 @@ export default function ImageToPdfPage() {
       <ToolWorkspace
         accept='image/*'
         run={(files, onProgress) => imagesToPdf(files, { pageSize, margin }, onProgress)}
+        processLabel='Building PDF'
         runLabel='Create PDF'
         hint='Add images in order — each image becomes a page'
         options={

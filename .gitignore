@@ -46,3 +46,10 @@ Morph.zip
 
 # logs
 *.log
+
+AGENTS.md
+CLAUDE.md
+
+# test artifacts
+/test-results/
+/playwright-report/

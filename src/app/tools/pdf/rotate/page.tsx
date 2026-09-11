@@ -29,6 +29,7 @@ export default function RotatePdfPage() {
         accept='application/pdf,.pdf'
         multiple={false}
         run={(files, onProgress) => rotatePdf(files, rotateOptions, onProgress)}
+        processLabel='Rotating'
         runLabel='Rotate PDF'
         hint='One PDF at a time'
         options={

@@ -20,6 +20,7 @@ export default function PdfToImagePage() {
         accept='application/pdf,.pdf'
         multiple={false}
         run={(files, onProgress) => pdfToImages(files, { format, quality: quality / 100, scale }, onProgress)}
+        processLabel='Rendering pages'
         runLabel='Export pages as images'
         hint='One PDF at a time — every page becomes an image'
         options={

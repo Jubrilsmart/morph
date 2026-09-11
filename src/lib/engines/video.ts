@@ -84,7 +84,7 @@ async function execWithProgress(
 ) {
   const handler = ({ progress }: { progress: number }) => {
     const clamped = Math.min(1, Math.max(0, progress || 0))
-    onProgress(fileIndex, 10 + clamped * 85, message)
+    onProgress(fileIndex, 20 + clamped * 79, message)
   }
   ffmpeg.on('progress', handler)
   try {
@@ -122,6 +122,7 @@ export async function convertVideos(
     onProgress(i, 5, 'Loading file…')
 
     await ffmpeg.writeFile(inputName, await (await import('@ffmpeg/util')).fetchFile(files[i]))
+    onProgress(i, 15, 'Loaded')
 
     await execWithProgress(
       ffmpeg,
@@ -183,6 +184,7 @@ export async function compressVideos(
     onProgress(i, 5, 'Loading file…')
 
     await ffmpeg.writeFile(inputName, await (await import('@ffmpeg/util')).fetchFile(files[i]))
+    onProgress(i, 15, 'Loaded')
 
     await execWithProgress(
       ffmpeg,

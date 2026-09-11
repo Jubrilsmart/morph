@@ -34,6 +34,7 @@ export default function ImageCropPage() {
         multiple={false}
         minFiles={1}
         run={(files, onProgress) => cropImages(files, options, onProgress)}
+        processLabel='Cropping'
         runLabel='Crop image'
         hint='One image at a time — the crop preview appears after you add a file'
         options={(files) => (

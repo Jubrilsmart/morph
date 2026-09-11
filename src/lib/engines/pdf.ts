@@ -53,6 +53,7 @@ export async function imagesToPdf(
       isPng = true
     }
 
+    onProgress(i, 15, 'Loaded')
     onProgress(i, 70, 'Embedding…')
     const image = isPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes)
 
@@ -98,7 +99,9 @@ export async function pdfToImages(
   onProgress: ProgressCallback
 ) {
   if (files.length !== 1) throw new EngineError('PDF to Image works with a single PDF at a time.')
+  onProgress(0, 5, 'Reading PDF…')
   const { doc } = await loadPdf(files[0])
+  onProgress(0, 15, 'Loaded')
   const outputs = []
   const extension = options.format === 'image/png' ? 'png' : 'jpg'
 
@@ -132,7 +135,9 @@ export async function pdfToImages(
 
 export async function mergePdfs(files: File[], onProgress: ProgressCallback) {
   if (files.length < 2) throw new EngineError('Select at least two PDFs to merge.')
+  onProgress(0, 5, 'Reading PDFs…')
   const { PDFDocument } = await loadPdfLib()
+  onProgress(0, 15, 'Loaded')
   const merged = await PDFDocument.create()
 
   for (let i = 0; i < files.length; i++) {
@@ -154,7 +159,7 @@ export interface SplitOptions {
   ranges: string // "1-3,5,8-10"
 }
 
-function parseRanges(ranges: string, pageCount: number): number[][] {
+export function parseRanges(ranges: string, pageCount: number): number[][] {
   const groups = ranges
     .split(',')
     .map((part) => part.trim())
@@ -177,8 +182,10 @@ function parseRanges(ranges: string, pageCount: number): number[][] {
 
 export async function splitPdf(files: File[], options: SplitOptions, onProgress: ProgressCallback) {
   if (files.length !== 1) throw new EngineError('Split works with a single PDF at a time.')
+  onProgress(0, 5, 'Reading PDF…')
   const { PDFDocument } = await loadPdfLib()
   const source = await PDFDocument.load(await files[0].arrayBuffer(), { ignoreEncryption: true })
+  onProgress(0, 15, 'Loaded')
   const pageCount = source.getPageCount()
   const baseName = files[0].name.replace(/\.pdf$/i, '')
 
@@ -213,7 +220,9 @@ export interface RotateOptions {
 
 export async function rotatePdf(files: File[], options: RotateOptions, onProgress: ProgressCallback) {
   if (files.length !== 1) throw new EngineError('Rotate works with a single PDF at a time.')
+  onProgress(0, 5, 'Reading PDF…')
   const { PDFDocument, degrees } = await loadPdfLib()
+  onProgress(0, 15, 'Loaded')
   const doc = await PDFDocument.load(await files[0].arrayBuffer(), { ignoreEncryption: true })
   const pageCount = doc.getPageCount()
 

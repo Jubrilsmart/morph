@@ -25,6 +25,7 @@ export default function ImageResizePage() {
         run={(files, onProgress) =>
           resizeImages(files, { mode, percent, width, height, keepAspect }, onProgress)
         }
+        processLabel='Resizing'
         runLabel='Resize images'
         options={
           <OptionsPanel>

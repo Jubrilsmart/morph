@@ -15,6 +15,7 @@ export default function MergePdfPage() {
         accept='application/pdf,.pdf'
         minFiles={2}
         run={mergePdfs}
+        processLabel='Merging'
         runLabel='Merge PDFs'
         hint='Add PDFs in the order you want them merged'
       />

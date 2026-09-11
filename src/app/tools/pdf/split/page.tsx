@@ -21,6 +21,7 @@ export default function SplitPdfPage() {
         accept='application/pdf,.pdf'
         multiple={false}
         run={(files, onProgress) => splitPdf(files, { mode, ranges }, onProgress)}
+        processLabel='Splitting'
         runLabel='Split PDF'
         hint='One PDF at a time'
         options={

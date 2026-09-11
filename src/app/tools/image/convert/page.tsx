@@ -28,6 +28,7 @@ export default function ImageConvertPage() {
       <ToolWorkspace
         accept='image/*'
         run={(files, onProgress) => convertImages(files, { format, quality: quality / 100 }, onProgress)}
+        processLabel='Converting'
         runLabel={`Convert to ${extension.toUpperCase()}`}
         options={
           <OptionsPanel>

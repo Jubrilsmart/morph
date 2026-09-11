@@ -15,6 +15,7 @@ export default function PdfToDocxPage() {
         accept='application/pdf,.pdf'
         multiple={false}
         run={pdfToDocx}
+        processLabel='Extracting text'
         runLabel='Convert to DOCX'
         hint='One PDF at a time — text extraction, layout not preserved'
       />

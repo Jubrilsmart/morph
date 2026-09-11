@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress' // created below
 import {
   CircleCheck,
   CircleX,
@@ -17,7 +16,7 @@ import {
 import { cn } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import type { EngineRun, OutputFile } from '@/lib/engines/types'
-import ConversionProgress from './ConversionProgress'
+import ConversionProgress, { type RunStatus } from './ConversionProgress'
 
 export interface QueuedFile {
   id: string
@@ -41,6 +40,8 @@ interface ToolWorkspaceProps {
   runDisabled?: boolean
   scaffold?: boolean
   hint?: string
+  /** Label for the processing step card, e.g. "Compressing" or "Merging". */
+  processLabel?: string
 }
 
 export default function ToolWorkspace({
@@ -53,10 +54,12 @@ export default function ToolWorkspace({
   runDisabled = false,
   scaffold = false,
   hint,
+  processLabel = 'Converting',
 }: ToolWorkspaceProps) {
   const [files, setFiles] = useState<QueuedFile[]>([])
   const [outputs, setOutputs] = useState<WorkspaceOutput[]>([])
   const [running, setRunning] = useState(false)
+  const [runStatus, setRunStatus] = useState<RunStatus | 'idle'>('idle')
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const outputsRef = useRef<WorkspaceOutput[]>([])
@@ -80,6 +83,7 @@ export default function ToolWorkspace({
     (incoming: FileList | File[]) => {
       const list = Array.from(incoming)
       if (list.length === 0) return
+      setRunStatus('idle')
       if (!multiple) {
         clearOutputs()
         setFiles(list.slice(0, 1).map((file) => ({ id: crypto.randomUUID(), file, status: 'queued' as const, progress: 0 })))
@@ -96,6 +100,7 @@ export default function ToolWorkspace({
 
   const removeFile = useCallback(
     (id: string) => {
+      setRunStatus('idle')
       clearOutputs()
       setFiles((prev) => prev.filter((f) => f.id !== id))
     },
@@ -103,6 +108,7 @@ export default function ToolWorkspace({
   )
 
   const clearAll = useCallback(() => {
+    setRunStatus('idle')
     clearOutputs()
     setFiles([])
   }, [clearOutputs])
@@ -117,6 +123,7 @@ export default function ToolWorkspace({
       return
     }
     setRunning(true)
+    setRunStatus('running')
     clearOutputs()
     setFiles((prev) => prev.map((f) => ({ ...f, status: 'queued', progress: 0, message: undefined })))
     try {
@@ -127,6 +134,7 @@ export default function ToolWorkspace({
       setFiles((prev) => prev.map((f) => ({ ...f, status: 'done', progress: 100 })))
       const withUrls = results.map((result) => ({ ...result, url: URL.createObjectURL(result.blob) }))
       setOutputs(withUrls)
+      setRunStatus('success')
       toast.success(
         withUrls.length === 1
           ? `Done — ${withUrls[0].name} is ready.`
@@ -135,6 +143,7 @@ export default function ToolWorkspace({
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Conversion failed.'
       setFiles((prev) => prev.map((f) => (f.status === 'processing' ? { ...f, status: 'error', message } : f)))
+      setRunStatus('error')
       toast.error(message)
     } finally {
       setRunning(false)
@@ -225,36 +234,26 @@ export default function ToolWorkspace({
           </CardHeader>
           <CardContent className='flex flex-col gap-3'>
             {files.map((item) => (
-              <div key={item.id} className='flex flex-col gap-1.5'>
-                <div className='flex items-center gap-3 text-sm'>
-                  {item.status === 'done' ? (
-                    <CircleCheck className='size-4 shrink-0 text-green-500' />
-                  ) : item.status === 'error' ? (
-                    <CircleX className='size-4 shrink-0 text-destructive' />
-                  ) : item.status === 'processing' ? (
-                    <Loader2 className='size-4 shrink-0 animate-spin text-primary' />
-                  ) : (
-                    <FileUp className='size-4 shrink-0 text-muted-foreground' />
-                  )}
-                  <span className='truncate flex-1' title={item.file.name}>{item.file.name}</span>
-                  <span className='text-xs text-muted-foreground shrink-0'>{formatBytes(item.file.size)}</span>
-                  <button
-                    aria-label={`Remove ${item.file.name}`}
-                    onClick={() => removeFile(item.id)}
-                    disabled={running}
-                    className='text-muted-foreground hover:text-destructive disabled:opacity-40 shrink-0'
-                  >
-                    <X className='size-4' />
-                  </button>
-                </div>
-                {(item.status === 'processing' || item.message) && (
-                  <div className='flex items-center gap-2 text-xs text-muted-foreground pl-7'>
-                    {item.status === 'processing' && (
-                      <Progress value={item.progress} className='h-1.5 flex-1' />
-                    )}
-                    {item.message}
-                  </div>
+              <div key={item.id} className='flex items-center gap-3 text-sm'>
+                {item.status === 'done' ? (
+                  <CircleCheck className='size-4 shrink-0 text-green-500' />
+                ) : item.status === 'error' ? (
+                  <CircleX className='size-4 shrink-0 text-destructive' />
+                ) : item.status === 'processing' ? (
+                  <Loader2 className='size-4 shrink-0 animate-spin text-primary' />
+                ) : (
+                  <FileUp className='size-4 shrink-0 text-muted-foreground' />
                 )}
+                <span className='truncate flex-1' title={item.file.name}>{item.file.name}</span>
+                <span className='text-xs text-muted-foreground shrink-0'>{formatBytes(item.file.size)}</span>
+                <button
+                  aria-label={`Remove ${item.file.name}`}
+                  onClick={() => removeFile(item.id)}
+                  disabled={running}
+                  className='text-muted-foreground hover:text-destructive disabled:opacity-40 shrink-0'
+                >
+                  <X className='size-4' />
+                </button>
               </div>
             ))}
           </CardContent>
@@ -278,8 +277,10 @@ export default function ToolWorkspace({
         )}
       </Button>
 
-      {/* Live conversion progress — bold standalone card while running, kept on failure */}
-      {(running || files.some((f) => f.status === 'error')) && <ConversionProgress files={files} />}
+      {/* Sequential step cards — appear on run, stay on success recap or failure */}
+      {runStatus !== 'idle' && (
+        <ConversionProgress files={files} processLabel={processLabel} status={runStatus} />
+      )}
 
       {/* Results */}
       {outputs.length > 0 && (

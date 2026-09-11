@@ -21,6 +21,7 @@ export async function docxToPdf(files: File[], onProgress: ProgressCallback) {
   const mammoth = await import('mammoth')
   const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await files[0].arrayBuffer() })
   if (!html?.trim()) throw new EngineError('This document appears to be empty.')
+  onProgress(0, 15, 'Loaded')
 
   onProgress(0, 35, 'Laying out…')
   // A4 at 96dpi = 794px wide
@@ -130,12 +131,13 @@ export async function pdfToDocx(files: File[], onProgress: ProgressCallback) {
   onProgress(0, 5, 'Reading PDF…')
   const pdfjs = await loadPdfJs()
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await files[0].arrayBuffer()) }).promise
+  onProgress(0, 15, 'Loaded')
 
   const { Document, Packer, Paragraph, TextRun, PageBreak } = await import('docx')
   const children: InstanceType<typeof Paragraph>[] = []
 
   for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
-    onProgress(0, Math.round(((pageNumber - 1) / doc.numPages) * 100), `Extracting page ${pageNumber}…`)
+    onProgress(0, 20 + Math.round(((pageNumber - 1) / doc.numPages) * 80), `Extracting page ${pageNumber}…`)
     const page = await doc.getPage(pageNumber)
     const content = await page.getTextContent()
 
