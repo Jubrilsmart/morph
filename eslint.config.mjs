@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored third-party assets (ffmpeg wasm cores, pdf.js worker)
+    "public/ffmpeg/**",
+    "public/pdf.worker.min.mjs",
   ]),
 ]);
 

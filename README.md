@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Morph — The Ultimate Offline File Converter
 
-## Getting Started
+Morph is a privacy-first, 100% offline file converter. Every conversion — video, images, documents — runs entirely in your browser via WebAssembly and Canvas engines. No uploads, no servers, no trackers.
 
-First, run the development server:
+## Tools
+
+| Category | Tools |
+| --- | --- |
+| **Video** | Convert (MP4/WebM/MOV/MKV), Compress (CRF-based) — powered by self-hosted ffmpeg.wasm |
+| **Image** | Convert (PNG/JPEG/WEBP/AVIF), Compress, Resize, Crop (interactive), Background remove (scaffold) |
+| **Documents** | Image↔PDF, DOCX→PDF, PDF→DOCX (text extraction), Merge, Split, Rotate |
+
+## Install as an app
+
+Morph is an installable PWA — on desktop use the install icon in the address bar or the Install button; on iPhone, use Safari's Share → **Add to Home Screen**. Once installed, it works fully offline.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) 16 (App Router) · React 19 · TypeScript
+- Tailwind CSS v4 + shadcn/ui (Base UI primitives)
+- ffmpeg.wasm (self-hosted cores, multi-threaded when cross-origin isolated)
+- pdf-lib · pdf.js · mammoth · jsPDF · docx
+- next-themes for light/dark/system theming
+
+## Getting started
 
 ```bash
-npm run dev
-# or
+yarn install
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+yarn build   # production build
+yarn start   # serve the production build
+yarn lint    # eslint
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Notes
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The ffmpeg WASM cores live in `public/ffmpeg/` (single- and multi-threaded). The app picks the multi-threaded core automatically when the page is cross-origin isolated (COOP/COEP headers are set in `next.config.ts`).
+- `public/sw.js` is the service worker backing offline mode and installs.
+- PDF→DOCX is best-effort text extraction; layout, images and tables are not preserved (the UI says so).
