@@ -8,8 +8,8 @@ import React from 'react'
 const mobileNav = [
   { title: "Home", href: "/", icon: Home },
   { title: "Tools", href: "/tools", icon: LayoutGrid },
-  { title: "Recent", href: "", icon: Clock, disabled: true },
-  { title: "Settings", href: "", icon: Settings, disabled: true },
+  { title: "Recent", href: "/tools/recent", icon: Clock },
+  { title: "Settings", href: "/tools/settings", icon: Settings },
 ]
 
 export default function MobileNav() {
@@ -23,20 +23,7 @@ export default function MobileNav() {
       <div className='h-14 w-full flex justify-between'>
         {mobileNav.map((item) => {
           const Icon = item.icon
-          const active = !item.disabled && isActive(item.href)
-          if (item.disabled) {
-            return (
-              <div
-                className='flex flex-col justify-center items-center cursor-not-allowed text-muted-foreground/50'
-                key={item.title}
-                aria-disabled
-                title="Coming soon"
-              >
-                <Icon size={24} />
-                <p className=''>{item.title}</p>
-              </div>
-            )
-          }
+          const active = isActive(item.href)
           return (
             <Link
               className={`flex flex-col justify-center items-center cursor-pointer transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}

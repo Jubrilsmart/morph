@@ -97,7 +97,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton>
+              <SidebarMenuButton render={<Link href="/tools/recent" />}>
                 <Clock />
                 <span>Recent Files</span>
               </SidebarMenuButton>
@@ -116,7 +116,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter><SidebarMenuItem>
-        <SidebarMenuButton>
+        <SidebarMenuButton render={<Link href="/tools/settings" />}>
           <Settings />
           <span>Settings</span>
         </SidebarMenuButton>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,6 +17,8 @@ import {
 import { cn } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import type { EngineRun, OutputFile } from '@/lib/engines/types'
+import { recordRun } from '@/lib/history'
+import { toolByHref } from '@/lib/tools'
 import ConversionProgress, { type RunStatus } from './ConversionProgress'
 
 export interface QueuedFile {
@@ -62,6 +65,7 @@ export default function ToolWorkspace({
   const [runStatus, setRunStatus] = useState<RunStatus | 'idle'>('idle')
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const pathname = usePathname()
   const outputsRef = useRef<WorkspaceOutput[]>([])
   useEffect(() => {
     outputsRef.current = outputs
@@ -131,6 +135,23 @@ export default function ToolWorkspace({
         files.map((f) => f.file),
         (index, progress, message) => updateFile(index, { status: 'processing', progress, message })
       )
+      // Record the run for the Recent page (metadata first, then output
+      // bytes in OPFS). Started before the success UI so the IDB commit
+      // races ahead of any user navigation; recordRun swallows its own
+      // failures and never blocks the results below.
+      let toolMeta = { toolId: '', toolTitle: '', toolHref: pathname }
+      try {
+        const tool = toolByHref(pathname)
+        toolMeta = { toolId: tool.id, toolTitle: tool.title, toolHref: tool.href }
+      } catch {
+        // page not in the registry — record with the bare path
+      }
+      const recorded = recordRun(
+        toolMeta,
+        files.map((f) => f.file),
+        results as OutputFile[]
+      )
+
       setFiles((prev) => prev.map((f) => ({ ...f, status: 'done', progress: 100 })))
       const withUrls = results.map((result) => ({ ...result, url: URL.createObjectURL(result.blob) }))
       setOutputs(withUrls)
@@ -140,6 +161,7 @@ export default function ToolWorkspace({
           ? `Done — ${withUrls[0].name} is ready.`
           : `Done — ${withUrls.length} files are ready.`
       )
+      await recorded
     } catch (error) {
       // Engines and ffmpeg.wasm reject with plain strings as often as with
       // Errors — keep the message in both cases.
@@ -155,7 +177,7 @@ export default function ToolWorkspace({
     } finally {
       setRunning(false)
     }
-  }, [files, minFiles, run, updateFile, clearOutputs])
+  }, [files, minFiles, run, updateFile, clearOutputs, pathname])
 
   const downloadAll = useCallback(() => {
     outputs.forEach((output, index) => {

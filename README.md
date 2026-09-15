@@ -20,6 +20,7 @@ Every tool is real and wired up — there are no placeholder pages. The single e
 - **Sequential step cards.** While a run is in flight you see each stage as its own card — Reading file → Loaded → Converting/Compressing/Merging… → Complete — with the active step carrying a 0–100% bar normalized within that step.
 - **Honest about limits.** PDF→DOCX is best-effort text extraction; layout, images and tables are not preserved, and the UI says so before you run it. Video outputs are MP4/MOV/MKV: WebM is input-only because the wasm core's libvpx encoder crashes (see `src/lib/engines/video.ts`); VP8/VP9 *decoding* works, so WebM files convert to any output.
 - **Crash-hardened engine.** ffmpeg.wasm execs are wrapped in `src/lib/engines/ffmpeg.ts`: a worker crash or a hang (inactivity watchdog) surfaces as a readable error and terminates the poisoned worker, so the next run starts from a fresh core instead of spinning forever.
+- **Recent + Settings.** Every finished run is recorded on-device (metadata in IndexedDB, output bytes in OPFS — the browser's private filesystem). The Recent page re-opens or re-downloads stored outputs without re-running the engine; Settings controls retention (keep outputs, entry count, storage budget), shows storage usage and can make storage persistent or clear it all.
 
 ## Install as an app
 
@@ -51,7 +52,7 @@ yarn lint       # eslint
 | Suite | Command | What it covers |
 | --- | --- | --- |
 | Unit + integration | `yarn test` | format helpers, tool-registry invariants, PDF range parsing; real merge/split/rotate/images→PDF engine runs asserted with pdf-lib |
-| E2E | `yarn test:e2e` | every tool page with real file uploads and verified downloads (magic bytes, page counts, zip structure), sequential step cards, the per-step progress bar, landing, hub + search, PWA (manifest, cross-origin isolation, service worker + wasm assets) |
+| E2E | `yarn test:e2e` | every tool page with real file uploads and verified downloads (magic bytes, page counts, zip structure), sequential step cards, the per-step progress bar, Recent/Settings (record → re-download → clear), landing, hub + search, PWA (manifest, cross-origin isolation, service worker + wasm assets) |
 
 E2E runs against a production build on **port 3100** (so it never collides with a dev server on 3000), one worker at a time because the wasm conversions are CPU-heavy. It uses the system Chromium by default; override with `PLAYWRIGHT_CHROMIUM_PATH`.
 
@@ -65,7 +66,7 @@ yarn test:fixtures   # rebuilds PDFs/DOCX with the project's own libs; media via
 
 ```
 src/
-  app/                    # routes: landing, /tools hub, 14 tool pages, manifest
+  app/                    # routes: landing, /tools hub, 14 tool pages, /tools/recent, /tools/settings, manifest
   components/
     tools/                # ToolShell, FileDropzone, ToolWorkspace, ConversionProgress, …
     ui/                   # shadcn/ui components (Base UI primitives)
