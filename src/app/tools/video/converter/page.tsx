@@ -30,7 +30,6 @@ export default function VideoConverterPage() {
               onChange={(value) => setFormat(value as VideoFormat)}
               options={[
                 { value: 'mp4', label: 'MP4 — universal (H.264)' },
-                { value: 'webm', label: 'WebM — web-native (VP9)' },
                 { value: 'mov', label: 'MOV — QuickTime' },
                 { value: 'mkv', label: 'MKV — flexible container' },
               ]}

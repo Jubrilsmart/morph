@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  AudioLines,
   Crop,
   Eraser,
   File,
@@ -82,6 +83,15 @@ export const tools: Tool[] = [
     description: "WASM accelerated offline run",
     href: "/tools/video/compressor",
     icon: VideoOff,
+    category: "video",
+    status: "ready",
+  },
+  {
+    id: "video-audio-extract",
+    title: "Extract Audio",
+    description: "Rip audio from video, or convert audio formats",
+    href: "/tools/video/audio",
+    icon: AudioLines,
     category: "video",
     status: "ready",
   },

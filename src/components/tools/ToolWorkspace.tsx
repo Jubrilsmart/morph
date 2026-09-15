@@ -141,7 +141,14 @@ export default function ToolWorkspace({
           : `Done — ${withUrls.length} files are ready.`
       )
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Conversion failed.'
+      // Engines and ffmpeg.wasm reject with plain strings as often as with
+      // Errors — keep the message in both cases.
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string' && error.trim()
+            ? error.trim()
+            : 'Conversion failed.'
       setFiles((prev) => prev.map((f) => (f.status === 'processing' ? { ...f, status: 'error', message } : f)))
       setRunStatus('error')
       toast.error(message)

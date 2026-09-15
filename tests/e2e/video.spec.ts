@@ -39,7 +39,7 @@ test('video converter runs in wasm and downloads a real output', async ({ page }
   await expect(page.getByText('Results')).toBeVisible({ timeout: 60_000 })
   const file = await downloadFirst(page)
   expect(file.size).toBeGreaterThan(1000)
-  expect(file.name).toMatch(/\.(mp4|webm|mov|mkv)$/)
+  expect(file.name).toMatch(/\.(mp4|mov|mkv)$/)
 
   expect(realConsoleErrors(errors)).toEqual([])
 })
@@ -83,4 +83,26 @@ test('converting card carries its own 0-100 progress bar', async ({ page }) => {
   expect(percentages.length).toBeGreaterThan(0)
   expect(Math.max(...percentages)).toBeLessThanOrEqual(100)
   expect(Math.min(...percentages)).toBeGreaterThanOrEqual(0)
+})
+
+test('converts a VP8/VP9 webm input to mp4 and survives a second run', async ({ page }) => {
+  test.setTimeout(300_000)
+  const errors = watchConsole(page)
+
+  // VP8/VP9 *decoding* works in the wasm core (only encoding is broken), so
+  // webm must convert to mp4 like any other input.
+  await page.goto('/tools/video/converter')
+  await page.setInputFiles('input[type=file]', fixture('sample.webm'))
+  await page.click('button.w-full.py-6')
+  await expect(page.getByText('Results')).toBeVisible({ timeout: 120_000 })
+  const webmRun = await downloadFirst(page)
+  expect(webmRun.name).toMatch(/\.mp4$/)
+  expect(webmRun.bytes().subarray(4, 8).toString('latin1')).toBe('ftyp')
+
+  // The engine singleton must stay usable after a successful run.
+  await page.setInputFiles('input[type=file]', fixture('sample.mp4'))
+  await page.click('button.w-full.py-6')
+  await expect(page.getByText('Results')).toBeVisible({ timeout: 120_000 })
+
+  expect(realConsoleErrors(errors)).toEqual([])
 })

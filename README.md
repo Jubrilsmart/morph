@@ -6,7 +6,7 @@ Morph is a privacy-first, 100% offline file converter. Every conversion — vide
 
 | Category | Tools |
 | --- | --- |
-| **Video** | Convert (MP4/WebM/MOV/MKV), Compress (CRF-based) — powered by self-hosted ffmpeg.wasm |
+| **Video** | Convert (MP4/MOV/MKV), Compress (CRF-based), Extract audio (MP3/WAV/M4A/OGG/FLAC) — powered by self-hosted ffmpeg.wasm |
 | **Image** | Convert (PNG/JPEG/WEBP/AVIF), Compress, Resize, Crop (interactive), Background remove (scaffold) |
 | **Documents** | Image→PDF, PDF→Image, DOCX→PDF, PDF→DOCX (text extraction), Merge, Split (ranges), Rotate |
 
@@ -15,10 +15,11 @@ Every tool is real and wired up — there are no placeholder pages. The single e
 ## How it works
 
 - **Everything is client-side.** Engines are browser libraries loaded lazily when a tool runs: ffmpeg.wasm for video, Canvas/OffscreenCanvas for images, pdf-lib + pdf.js + mammoth + jsPDF + docx for documents. There is no conversion server anywhere.
-- **One registry, every surface.** `src/lib/tools.ts` is the single source of truth for the 14 tools; the hub, category pages and sidebar all render from it, so nothing can go out of sync.
+- **One registry, every surface.** `src/lib/tools.ts` is the single source of truth for the 15 tools; the hub, category pages and sidebar all render from it, so nothing can go out of sync.
 - **Self-hosted wasm.** The ffmpeg cores (single- and multi-threaded) live in `public/ffmpeg/` — nothing is fetched from a CDN, keeping the offline promise. The app automatically uses the multi-threaded core when the page is cross-origin isolated (COOP/COEP headers are set in `next.config.ts`).
 - **Sequential step cards.** While a run is in flight you see each stage as its own card — Reading file → Loaded → Converting/Compressing/Merging… → Complete — with the active step carrying a 0–100% bar normalized within that step.
-- **Honest about limits.** PDF→DOCX is best-effort text extraction; layout, images and tables are not preserved, and the UI says so before you run it.
+- **Honest about limits.** PDF→DOCX is best-effort text extraction; layout, images and tables are not preserved, and the UI says so before you run it. Video outputs are MP4/MOV/MKV: WebM is input-only because the wasm core's libvpx encoder crashes (see `src/lib/engines/video.ts`); VP8/VP9 *decoding* works, so WebM files convert to any output.
+- **Crash-hardened engine.** ffmpeg.wasm execs are wrapped in `src/lib/engines/ffmpeg.ts`: a worker crash or a hang (inactivity watchdog) surfaces as a readable error and terminates the poisoned worker, so the next run starts from a fresh core instead of spinning forever.
 
 ## Install as an app
 
@@ -64,12 +65,12 @@ yarn test:fixtures   # rebuilds PDFs/DOCX with the project's own libs; media via
 
 ```
 src/
-  app/                    # routes: landing, /tools hub, 13 tool pages, manifest
+  app/                    # routes: landing, /tools hub, 14 tool pages, manifest
   components/
     tools/                # ToolShell, FileDropzone, ToolWorkspace, ConversionProgress, …
     ui/                   # shadcn/ui components (Base UI primitives)
   lib/
-    engines/              # video (ffmpeg.wasm), image (Canvas), pdf, docx
+    engines/              # video + audio (ffmpeg.wasm), image (Canvas), pdf, docx
     tools.ts              # the tool registry (single source of truth)
 public/
   ffmpeg/                 # self-hosted wasm cores (single- + multi-threaded)

@@ -6,6 +6,7 @@ test('hub lists every tool from the registry', async ({ page }) => {
   const toolHrefs = [
     '/tools/video/converter',
     '/tools/video/compressor',
+    '/tools/video/audio',
     '/tools/image/convert',
     '/tools/image/compress',
     '/tools/image/resize',

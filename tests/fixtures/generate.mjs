@@ -83,6 +83,25 @@ try {
   console.log('ffmpeg not available — keeping committed sample-long.mp4')
 }
 
+// WebM input fixture (VP8 + Vorbis): VP8/VP9 *decoding* works in the wasm
+// core even though encoding is broken, and the e2e suite covers converting
+// webm inputs to mp4.
+try {
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y', '-f', 'lavfi', '-i', 'testsrc=duration=2:size=320x240:rate=15',
+      '-f', 'lavfi', '-i', 'sine=frequency=440:duration=2',
+      '-c:v', 'libvpx', '-b:v', '200k', '-c:a', 'libvorbis', '-shortest',
+      path.join(dir, 'sample.webm'),
+    ],
+    { stdio: 'ignore' }
+  )
+  console.log('wrote sample.webm')
+} catch {
+  console.log('ffmpeg not available — keeping committed sample.webm')
+}
+
 try {
   execFileSync(
     'ffmpeg',
