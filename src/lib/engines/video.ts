@@ -3,6 +3,7 @@ import { EngineError, type ProgressCallback } from './types'
 import { replaceExtension } from '../format'
 
 export type VideoFormat = 'mp4' | 'mov' | 'mkv'
+export type Resolution = 'keep' | '1080' | '720' | '480'
 
 interface CodecPreset {
   vcodec: string
@@ -12,37 +13,50 @@ interface CodecPreset {
   extraArgs: string[]
 }
 
-// NOTE: WebM is deliberately not offered. The self-hosted @ffmpeg/core
-// 0.12.10 has a broken libvpx: libvpx-vp9 traps with "RuntimeError: memory
-// access out of bounds" a few dozen frames into the encode (verified on
-// both the multi- and single-thread builds), and libvpx (VP8) is too slow
-// to be usable. VP8/VP9 *decoding* works fine — see compressOutputFormat.
 const PRESETS: Record<VideoFormat, CodecPreset> = {
   mp4: { vcodec: 'libx264', acodec: 'aac', ext: 'mp4', mime: 'video/mp4', extraArgs: ['-tag:v', 'avc3'] },
   mov: { vcodec: 'libx264', acodec: 'aac', ext: 'mov', mime: 'video/quicktime', extraArgs: [] },
   mkv: { vcodec: 'libx264', acodec: 'aac', ext: 'mkv', mime: 'video/x-matroska', extraArgs: [] },
 }
 
-export type Resolution = 'keep' | '1080' | '720' | '480'
+const CRF: Record<'high' | 'balanced' | 'small', number> = {
+  high: 18,
+  balanced: 23,
+  small: 28,
+}
 
 function scaleArgs(resolution: Resolution): string[] {
   if (resolution === 'keep') return []
-  return ['-vf', `scale=-2:${resolution}`]
+  return ['-vf', `scale=-2:${resolution},format=yuv420p`]
 }
 
 function inputExtension(file: File): string {
-  return file.name.split('.').pop()?.toLowerCase() || 'mp4'
+  const parts = file.name.split('.')
+  if (parts.length <= 1) return 'mp4'
+  return parts.pop()!.toLowerCase()
 }
 
-/**
- * Output container the compressor uses for a given input extension. MKV
- * keeps its container (H.264-in-MKV works); WebM inputs are re-encoded to
- * MP4 because the wasm core cannot encode VP8/VP9 (see PRESETS note).
- * Exported for unit tests.
- */
+// Determines if it's safe to use multi-threaded audio copying
+function getAudioArgs(ext: string, targetAcodec: string): { threads: string; args: string[] } {
+  const safeExtensions = ['mp4', 'mov', 'mkv']
+
+  if (safeExtensions.includes(ext)) {
+    // Multi-threaded copy: Fast and safe for standard formats
+    return {
+      threads: '4',
+      args: ['-c:a', 'copy']
+    }
+  }
+
+  // Single-threaded re-encode fallback: Prevents deadlocks on weirder formats
+  return {
+    threads: '1',
+    args: ['-c:a', targetAcodec]
+  }
+}
+
 export function compressOutputFormat(extension: string): VideoFormat {
-  if (extension === 'mkv') return 'mkv'
-  return 'mp4'
+  return extension === 'mkv' ? 'mkv' : 'mp4'
 }
 
 export interface ConvertVideoOptions {
@@ -51,41 +65,38 @@ export interface ConvertVideoOptions {
   quality: 'high' | 'balanced' | 'small'
 }
 
-const CRF: Record<ConvertVideoOptions['quality'], number> = {
-  high: 18,
-  balanced: 23,
-  small: 28,
-}
-
 export async function convertVideos(
   files: File[],
   options: ConvertVideoOptions,
   onProgress: ProgressCallback
 ) {
-  const ffmpeg = await getFfmpeg((message) => onProgress(0, 2, message))
+  let currentTrackedIndex = 0
+  const ffmpeg = await getFfmpeg((message) => onProgress(currentTrackedIndex, 2, message))
   const preset = PRESETS[options.format]
+  const { fetchFile } = await import('@ffmpeg/util')
   const outputs = []
 
   for (let i = 0; i < files.length; i++) {
-    const inputName = `input-${i}.${inputExtension(files[i])}`
+    currentTrackedIndex = i
+    const ext = inputExtension(files[i])
+    const inputName = `input-${i}.${ext}`
     const outputName = `output-${i}.${preset.ext}`
-    onProgress(i, 5, 'Loading file…')
+    const audioStrategy = getAudioArgs(ext, preset.acodec)
 
-    await ffmpeg.writeFile(inputName, await (await import('@ffmpeg/util')).fetchFile(files[i]))
+    onProgress(i, 5, 'Loading file…')
+    await ffmpeg.writeFile(inputName, await fetchFile(files[i]))
     onProgress(i, 15, 'Loaded')
 
     await execFfmpeg(
       ffmpeg,
       [
-        '-i',
-        inputName,
-        '-c:v',
-        preset.vcodec,
-        '-crf',
-        String(CRF[options.quality]),
+        '-threads', audioStrategy.threads,
+        '-i', inputName,
+        '-c:v', preset.vcodec,
+        '-preset', 'ultrafast',
+        '-crf', String(CRF[options.quality]),
         ...preset.extraArgs,
-        '-c:a',
-        preset.acodec,
+        ...audioStrategy.args,
         ...scaleArgs(options.resolution),
         outputName,
       ],
@@ -98,9 +109,10 @@ export async function convertVideos(
     if (!(data instanceof Uint8Array) || data.length === 0) {
       throw new EngineError(`Conversion produced no output for ${files[i].name}.`)
     }
+
     outputs.push({
       name: replaceExtension(files[i].name, preset.ext),
-      blob: new Blob([new Uint8Array(data)], { type: preset.mime }),
+      blob: new Blob([data as any], { type: preset.mime }),
     })
 
     await ffmpeg.deleteFile(inputName)
@@ -112,7 +124,7 @@ export async function convertVideos(
 }
 
 export interface CompressVideoOptions {
-  quality: number // CRF 18 (best) … 35 (smallest)
+  quality: number
   resolution: Resolution
 }
 
@@ -121,34 +133,34 @@ export async function compressVideos(
   options: CompressVideoOptions,
   onProgress: ProgressCallback
 ) {
-  const ffmpeg = await getFfmpeg((message) => onProgress(0, 2, message))
+  let currentTrackedIndex = 0
+  const ffmpeg = await getFfmpeg((message) => onProgress(currentTrackedIndex, 2, message))
+  const { fetchFile } = await import('@ffmpeg/util')
   const outputs = []
 
   for (let i = 0; i < files.length; i++) {
-    const extension = inputExtension(files[i])
-    const format = compressOutputFormat(extension)
+    currentTrackedIndex = i
+    const ext = inputExtension(files[i])
+    const format = compressOutputFormat(ext)
     const preset = PRESETS[format]
-    const inputName = `input-${i}.${extension}`
+    const inputName = `input-${i}.${ext}`
     const outputName = `output-${i}.${preset.ext}`
-    onProgress(i, 5, 'Loading file…')
+    const audioStrategy = getAudioArgs(ext, preset.acodec)
 
-    await ffmpeg.writeFile(inputName, await (await import('@ffmpeg/util')).fetchFile(files[i]))
+    onProgress(i, 5, 'Loading file…')
+    await ffmpeg.writeFile(inputName, await fetchFile(files[i]))
     onProgress(i, 15, 'Loaded')
 
     await execFfmpeg(
       ffmpeg,
       [
-        '-i',
-        inputName,
-        '-c:v',
-        preset.vcodec,
-        '-crf',
-        String(options.quality),
+        '-threads', audioStrategy.threads,
+        '-i', inputName,
+        '-c:v', preset.vcodec,
+        '-preset', 'ultrafast',
+        '-crf', String(options.quality),
         ...preset.extraArgs,
-        '-c:a',
-        preset.acodec,
-        '-ac',
-        '2',
+        ...audioStrategy.args,
         ...scaleArgs(options.resolution),
         outputName,
       ],
@@ -161,9 +173,10 @@ export async function compressVideos(
     if (!(data instanceof Uint8Array) || data.length === 0) {
       throw new EngineError(`Compression produced no output for ${files[i].name}.`)
     }
+
     outputs.push({
       name: replaceExtension(files[i].name, `compressed.${preset.ext}`),
-      blob: new Blob([new Uint8Array(data)], { type: preset.mime }),
+      blob: new Blob([data as any], { type: preset.mime }),
     })
 
     await ffmpeg.deleteFile(inputName)

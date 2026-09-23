@@ -15,8 +15,9 @@ const mobileNav = [
 export default function MobileNav() {
   const pathname = usePathname()
 
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/')
+  const isActive = (href: string) => {
+    return pathname === href
+  };
 
   return (
     <div className='w-screen px-6 py-4 border-t border-accent bg-background'>
